@@ -1,0 +1,5 @@
+[API]
+stash_api_key = SAMPLESAMPLESAMPLESAMPLE
+
+[Paths]
+data_path = /path/to/main_profile/.data/

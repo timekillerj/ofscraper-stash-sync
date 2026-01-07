@@ -1,0 +1,151 @@
+import logging
+import stashapi.log as log
+from stashapi.stashapp import StashInterface
+
+
+class StashAPIHandler:
+    def __init__(self, api_key, scheme, host, port):
+        self.api_key = api_key
+        self.scheme = scheme
+        self.host = host
+        self.port = port
+        self.stash = None
+        self.connect()
+
+    def connect(self):
+        try:
+            self.stash = StashInterface({
+                "scheme": self.scheme,
+                "host": self.host,
+                "port": self.port,
+                "ApiKey": self.api_key,
+                "logger": log
+            })
+            logging.info("Connected to Stash API")
+        except Exception as e:
+            logging.error(f"Error connecting to Stash API: {e}")
+            self.stash = None
+
+    #def get_of_tag_id(self):
+    #    if self.stash:
+    #        try:
+    #            tags = self.stash.find_tags(
+    #                f={
+    #                    "name": {"value": "onlyfans", "modifier": "EQUALS"}
+    #                }
+    #            )
+    #        except Exception as e:
+    #            logging.error(f'Error getting tags: {e}')
+    #            return None
+    #    else:
+    #        logging.error("Not connected to Stash API")
+    #        return None
+
+    #    if not tags:
+    #        return None
+
+    #    # make sure we have the exact match
+    #    for tag in tags:
+    #        if tag['name'].lower() == 'onlyfans':
+    #            return tag['id']
+    #    return None
+
+    def get_of_studio_id(self):
+        if self.stash:
+            try:
+                studio = self.stash.find_studio("onlyfans")
+            except Exception as e:
+                logging.error("Error getting OnlyFans studio id")
+                return None
+        else:
+            logging.error("Not Connected to Stash API")
+            return None
+        if not studio:
+            return None
+        return studio.get("id")
+
+    def get_unorganized_of_model_images(self,performer):
+        try:
+            images = self.stash.find_images(
+                f={
+                    "path": {"value": performer, "modifier": "INCLUDES"},
+                    "organized": False
+                }
+            )
+        except Exception as e:
+            logging.error(f'Error getting images: {e}')
+            return None
+        return images
+
+    def get_unorganized_of_model_scenes(self,performer):
+        try:
+            scenes = self.stash.find_scenes(
+                f={
+                    "path": {"value": performer, "modifier": "INCLUDES"},
+                    "organized": False
+                }
+            )
+        except Exception as e:
+            logging.error(f'Error getting scenes: {e}')
+            return None
+        return scenes
+
+    def get_stash_performers_by_name(self,username):
+        try:
+            performers = self.stash.find_performers(
+                f={
+                    "name": {"value": username, "modifier": "EQUALS"},
+                }
+            )
+                
+            alias_performers = self.stash.find_performers(
+                f={
+                    "aliases": {"value": username, "modifier": "INCLUDES"},
+                }
+            )
+        except Exception as e:
+            logging.error(f'Error getting performers: {e}')
+            return None
+
+        all_performers = performers + alias_performers
+        matched_performers = []
+        performer_matched = False
+        for performer in all_performers:
+            # First make sure they are an OF model
+            tag_matched = False
+            for tag in performer['tags']:
+                if tag['name'].lower() == 'onlyfans':
+                    tag_matched = True
+            if not tag_matched:
+                continue
+
+            if performer['name'].lower() == username.lower():
+                performer_matched = True
+
+            for alias in performer['alias_list']:
+                if alias.lower() == username.lower():
+                    performer_matched = True
+            if performer_matched:
+                matched_performers.append(performer)
+        logging.debug(matched_performers)
+        return matched_performers
+
+    def update_scene(self, input_data):
+        if self.stash:
+            try:
+                self.stash.update_scene(input_data)
+                logging.info(f"Updated scene with id: {input_data['id']}")
+            except Exception as e:
+                logging.error(f"Error updating scene: {e}")
+        else:
+            logging.error("Not connected to Stash API")
+
+    def update_image(self, input_data):
+        if self.stash:
+            try:
+                self.stash.update_image(input_data)
+                logging.info(f"Updated image with id: {input_data['id']}")
+            except Exception as e:
+                logging.error(f"Error updating image: {e}")
+        else:
+            logging.error("Not connected to Stash API")
