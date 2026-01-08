@@ -1,5 +1,26 @@
-[API]
-stash_api_key = SAMPLESAMPLESAMPLESAMPLE
+[Stash]
+# Scheme is straight forward, either http or https depending on your implementation
+scheme = http
+
+# Host running your Stash instance
+host = 127.0.0.1
+
+# Port Stash is running on
+port = 9999
+
+# Stash API Key - under Settings->Security
+api_key = PASTE_STASH_API_KEY_HERE
+
+# If a performer is not found, should the script stop (exit) or skip and continue
+stop_on_missing_performer = True
+
+# Some couples use a single OF account. You can either create a similar couple "Performer"
+# in Stash, or create multiple performers and add the OF username as an alias for both
+# If you split the account into multiple performers, set this to 'True'
+# WARNING: This can have unintended consequences if other performers also have the 
+# same alias. Generic names can cause false matches and add unrelated performers to media
+multiple_performers_ok = False
 
 [Paths]
-data_path = /path/to/main_profile/.data/
+# Path to .data directory created by OF-Scraper
+data_path = /path/to/ofscraper/main_profile/.data/
