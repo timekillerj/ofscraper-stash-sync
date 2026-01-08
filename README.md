@@ -38,8 +38,12 @@ vi config.ini
 ```
 6. Run the code
 ```
-python of_metadata_sync.py -c config.ini
+python ofscraper-stash-sync -c config.ini
 ```
 
 ### Docker Execution
-TBD
+1. Create a configs directory and place a config in it. Use the config.ini.sample in this repo as reference
+2. Rune the docker image. You will need to mount 2 volumes. One for the configs path and one for the OF-Scraper data path. Command should look something like this:
+```
+docker run -it --rm --name=ofscraper-stash-sync -v /path/to/configs:/configs -v /path/to/ofscraper:/ofscraper ofscraper-stash-sync:latest of_metadata_sync -c /configs/config.ini
+```
