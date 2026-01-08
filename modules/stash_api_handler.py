@@ -69,6 +69,34 @@ class StashAPIHandler:
             return None
         return scenes
 
+    def get_all_of_model_images(self,performer):
+        try:
+            # Newly scanned images will not have a performer attached, so we use
+            # the file path since OF puts files in a model directory
+            images = self.stash.find_images(
+                f={
+                    "path": {"value": performer, "modifier": "INCLUDES"},
+                }
+            )
+        except Exception as e:
+            logging.error(f'Error getting images: {e}')
+            return None
+        return images
+
+    def get_all_of_model_scenes(self,performer):
+        try:
+            # Newly scanned scenes will not have a performer attached, so we use
+            # the file path since OF puts files in a model directory
+            scenes = self.stash.find_scenes(
+                f={
+                    "path": {"value": performer, "modifier": "INCLUDES"},
+                }
+            )
+        except Exception as e:
+            logging.error(f'Error getting scenes: {e}')
+            return None
+        return scenes
+
     def get_stash_performers_by_name(self,username):
         try:
             performers = self.stash.find_performers(

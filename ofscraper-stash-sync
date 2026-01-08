@@ -14,6 +14,8 @@ from modules.media_handler import MediaHandler
 parser = argparse.ArgumentParser(description="A tool to sync OFScraper metadata to Stash")
 parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose (debugging) output")
 parser.add_argument("-c", "--config", dest="config_path", help="Path to config file", required=True)
+parser.add_argument("-m", "--model", dest="filter_model", help="Filter to sync a single model's metadata")
+parser.add_argument("-fs","--full-sync", dest="full_sync", action="store_true", help="Ignore 'Organized' tag and (re)sync all media")
 
 args = parser.parse_args()
 
@@ -55,6 +57,7 @@ def main(config_path):
     # Get sqlite database files
     # OFScraper creates a sqlite file for each model, so we have to search the data path
     databases = db_handler.find_database_files()
+    logging.debug(f'Found {len(databases)} databases')
 
     for database in databases:
         db_handler.connect(database)
@@ -64,17 +67,23 @@ def main(config_path):
             return
 
         # Get usernames
-        # Should just b one profile, but it's a table so we assume more than one
+        # Should just be one profile, but it's a table so we assume more than one
         profiles = db_handler.execute("SELECT user_id, username FROM profiles").fetchall()
 
         for profile in profiles:
             user_id = profile[0]
             username = profile[1]
+            if args.filter_model and username != args.filter_model:
+                logging.debug(f'Skipping because {username} != {args.filter_model}')
+                continue
             logging.info(f'Username: {username}, UserId: {user_id}')
 
-            # Get unorganized images and scenes
+            # Get images and scenes
             # We do this in a single query to cache the results for efficiency
-            images = stash_handler.get_unorganized_of_model_images(username)
+            if args.full_sync:
+                images = stash_handler.get_all_of_model_images(username)
+            else:
+                images = stash_handler.get_unorganized_of_model_images(username)
             logging.debug(f'Images: {images}')
             images_dict = {}
             for image in images:
@@ -84,7 +93,10 @@ def main(config_path):
                     images_dict[visual_file['basename']] = image['id']
             logging.info(f'Found {len(images_dict)} images')
 
-            scenes = stash_handler.get_unorganized_of_model_scenes(username)
+            if args.full_sync:
+                scenes = stash_handler.get_all_of_model_scenes(username)
+            else:
+                scenes = stash_handler.get_unorganized_of_model_scenes(username)
             scenes_dict = {}
             logging.debug(f'Scenes: {scenes}')
             for scene in scenes:

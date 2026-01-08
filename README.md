@@ -45,5 +45,14 @@ python ofscraper-stash-sync -c config.ini
 1. Create a configs directory and place a config in it. Use the config.ini.sample in this repo as reference
 2. Rune the docker image. You will need to mount 2 volumes. One for the configs path and one for the OF-Scraper data path. Command should look something like this:
 ```
-docker run -it --rm --name=ofscraper-stash-sync -v /path/to/configs:/configs -v /path/to/ofscraper:/ofscraper ofscraper-stash-sync:latest of_metadata_sync -c /configs/config.ini
+docker run -it --rm --name=ofscraper-stash-sync -v /path/to/configs:/configs -v /path/to/ofscraper:/ofscraper timekillerj/ofscraper-stash-sync:latest ofscraper-stash-sync -c /configs/config.ini
 ```
+
+## Run Options
+|Option           |Parameter     | Description                                 |
+|-----------------|--------------|---------------------------------------------|
+|-h, --help       |              |show this help message and exit              |
+|-v, --verbose    |              |Enable verbose (debugging) output            |
+|-c, --config     |CONFIG_PATH   |Path to config file                          |
+|-m, --model      |FILTER_MODEL  |Filter to sync a single model's metadata     |
+|-fs, --full-sync |              |Ignore 'Organized' tag and (re)sync all media|

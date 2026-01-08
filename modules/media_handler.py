@@ -31,9 +31,9 @@ class MediaHandler:
         truncated_text = text[:max_length]
         last_space_index = truncated_text.rfind(' ')
         if last_space_index != -1:
-            return truncated_text[:last_space_index]
+            return f'{truncated_text[:last_space_index]}...'
         else:
-            return truncated_text
+            return f'{truncated_text}...'
 
     def parse_text_for_performers(self, text):
         # Look for '@' mentions in text and return a list
@@ -117,20 +117,21 @@ class MediaHandler:
             tagged_performer_ids = self.get_performer_ids_from_text(stash_handler, text)
         performer_ids = performer_ids + tagged_performer_ids
 
-        text = self.remove_html_tags(text)
-        description = ''
+        # If there is a line break (<br>), split to title/details
+        parts = re.split(r'<br\s*/?>', text, maxsplit=1, flags=re.IGNORECASE)
+        title = parts[0]
+        details = text
+        title = self.remove_html_tags(title)
+        details = self.remove_html_tags(details)
 
-        # TODO Remove debugging (newline in text)
-        #import pdb
-        #pdb.set_trace()
+        # Truncate very long titles
+        max_length = 255
+        if len(title) > max_length:
+            title = self.truncate_text(title, max_length)
 
-        # truncate long text and add it to the description
-        if len(text) > 255:
-            details = text
-            title = self.truncate_text(text)
-        else:
+        # If title and details match, drop the redundant details
+        if title == details:
             details = ''
-            title = text
         logging.debug(f'Title: {title}')
         logging.debug(f'Details: {details}')
 
@@ -152,8 +153,8 @@ class MediaHandler:
         logging.debug(f"FILE: {filename}")
         if media_type == 'Videos':
             stash_handler.update_scene(input)
-            logging.info(f"Updated: Scene {stash_media_id}: {text}")
+            logging.info(f"Updated: Scene {stash_media_id}: {title}")
         elif media_type == 'Images':
             stash_handler.update_image(input)
-            logging.info(f"Updated: Image {stash_media_id}: {text}")
+            logging.info(f"Updated: Image {stash_media_id}: {title}")
         return
