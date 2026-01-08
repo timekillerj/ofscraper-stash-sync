@@ -54,6 +54,6 @@ class DatabaseHandler:
     def close(self):
         if self.conn:
             self.conn.close()
-            logging.info(f"Disconnected from database: {self.db_path}")
+            logging.debug(f"Disconnected from database: {self.data_path}")
             self.conn = None
             self.cursor = None

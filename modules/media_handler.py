@@ -2,16 +2,29 @@ import logging
 import re
 from datetime import datetime
 
+import html
+
 class MediaHandler:
     def __init__(self):
         pass
 
     def remove_html_tags(self, text):
+        # Clean up HTML for Stash display
+
+        # Change <br> to newlines
         text = text.replace("<br>", "\n").replace("<br/>", "\n").replace("<br />", "\n")
+
+        # Get rid of any other tags
         clean = re.compile(r'<[^>]+>')
-        return clean.sub('', text)
+        text = clean.sub('', text)
+
+        # Also fix html encoding
+        text = html.unescape(text)
+
+        return text
 
     def truncate_text(self, text, max_length=255):
+        # OF text can be very long. We look for a good place to truncate on a space
         if len(text) <= max_length:
             return text
 
@@ -23,6 +36,7 @@ class MediaHandler:
             return truncated_text
 
     def parse_text_for_performers(self, text):
+        # Look for '@' mentions in text and return a list
         mentions = re.findall(r'@\w+[.]?\w+', text)
         all_tagged_performers = []
         for mention in mentions:
@@ -31,8 +45,8 @@ class MediaHandler:
                 all_tagged_performers.append(performer)
         return all_tagged_performers
 
-    def get_performer_ids_from_text(self, text):
-        # parse text for '@' mentions
+    def get_performer_ids_from_text(self, stash_handler, text):
+        # parse text for '@' mentions and try to find corresponding Stash performers
         tagged_performers = self.parse_text_for_performers(text)
         logging.debug(f'Found {len(tagged_performers)} performers mentioned')
 
@@ -43,7 +57,7 @@ class MediaHandler:
             tagged_performer = tagged_performer.lstrip('@')
 
             # Look for performer with exact match name or alias
-            performers = db_handler.get_stash_performers_by_name(tagged_performer)
+            performers = stash_handler.get_stash_performers_by_name(tagged_performer)
             if not performers:
                 continue
 
@@ -57,14 +71,17 @@ class MediaHandler:
         return all_performer_ids
 
 
-    def update_media(self, db_handler, profile, media_item, performer_ids, of_studio_id):
+    def update_media(self, db_handler, stash_handler, profile, media_item, performer_ids, of_studio_id):
+        # Split profile tuple to id and name
         user_id = profile[0]
         username = profile[1]
 
+        # Split media_item tuple to file and id
         filename = media_item[0]
         stash_media_id = media_item[1]
 
-        # Get metadata from sqlite db
+        # Use the username and filename to look in the OF database for metadata
+        logging.debug(f'Looking for media for {username} with filename {filename}')
         media_row = db_handler.execute('''
             SELECT media_id, post_id, link, filename, api_type, media_type, posted_at FROM medias WHERE model_id = ? AND filename = ?
         ''', (user_id, filename)).fetchone()
@@ -72,7 +89,7 @@ class MediaHandler:
             logging.debug(f'No media found for {filename}')
             return
         
-        logging.debug(media_row)
+        logging.debug(f'Found Media: {media_row}')
         media_id = media_row[0]
         post_id = media_row[1]
         link = media_row[2]
@@ -95,11 +112,17 @@ class MediaHandler:
         if not text:
             # No text found, generate something useful
             text = f'{api_type}: {posted_at_formatted}'
+            tagged_performer_ids = []
         else:
-            tagged_performer_ids = self.get_performer_ids_from_text(text)
+            tagged_performer_ids = self.get_performer_ids_from_text(stash_handler, text)
         performer_ids = performer_ids + tagged_performer_ids
+
         text = self.remove_html_tags(text)
         description = ''
+
+        # TODO Remove debugging (newline in text)
+        #import pdb
+        #pdb.set_trace()
 
         # truncate long text and add it to the description
         if len(text) > 255:
@@ -111,16 +134,14 @@ class MediaHandler:
         logging.debug(f'Title: {title}')
         logging.debug(f'Details: {details}')
 
-        import pdb
-        pdb.set_trace()
         input = {
             "id": stash_media_id,
-            "title": text,
+            "title": title,
             "code": media_id,
             "date": posted_at_formatted,
             "studio_id": of_studio_id,
             "performer_ids": performer_ids,
-            "details": description,
+            "details": details,
             "organized": True
         }
         if link:
@@ -130,9 +151,9 @@ class MediaHandler:
         # Find media in stash
         logging.debug(f"FILE: {filename}")
         if media_type == 'Videos':
-            stash.update_scene(input)
-            logging.info(f"Updated: Scene {media_id}: {text}")
+            stash_handler.update_scene(input)
+            logging.info(f"Updated: Scene {stash_media_id}: {text}")
         elif media_type == 'Images':
-            stash.update_image(input)
-            logging.info(f"Updated: Image {media_id}: {text}")
+            stash_handler.update_image(input)
+            logging.info(f"Updated: Image {stash_media_id}: {text}")
         return
