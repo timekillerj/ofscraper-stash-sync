@@ -47,7 +47,7 @@ def main(config_path):
     media_handler = MediaHandler()
 
     # Get OnlyFans studio_id
-    of_studio_id = stash_handler.get_of_studio_id()
+    of_studio_id = stash_handler.get_studio_id_by_name('OnlyFans')
     logging.debug(f'OnlyFans studio id: {of_studio_id}')
     if not of_studio_id:
         logging.error('Failed to get studio id for "OnlyFans". Exiting.')
@@ -77,6 +77,16 @@ def main(config_path):
                 logging.debug(f'Skipping because {username} != {args.filter_model}')
                 continue
             logging.info(f'Username: {username}, UserId: {user_id}')
+
+            # Get Studio for username
+            user_studio_id = stash_handler.get_studio_id_by_name(f'{username} (OnlyFans)')
+            if not user_studio_id:
+                # Create Studio
+                user_studio = stash_handler.create_of_user_studio(username, of_studio_id)
+                if not user_studio:
+                    logging.error(f"Failed to create user studio. Exiting.")
+                    return
+                user_studio_id = user_studio['id']
 
             # Get images and scenes
             # We do this in a single query to cache the results for efficiency
@@ -136,7 +146,7 @@ def main(config_path):
             media_dict = images_dict | scenes_dict
 
             for media_item in media_dict.items():
-                media_handler.update_media(db_handler, stash_handler, profile, media_item,performer_ids, of_studio_id)
+                media_handler.update_media(db_handler, stash_handler, profile, media_item,performer_ids, user_studio_id)
 
     db_handler.close()
 

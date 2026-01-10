@@ -71,7 +71,7 @@ class MediaHandler:
         return all_performer_ids
 
 
-    def update_media(self, db_handler, stash_handler, profile, media_item, performer_ids, of_studio_id):
+    def update_media(self, db_handler, stash_handler, profile, media_item, performer_ids, user_studio_id):
         # Split profile tuple to id and name
         user_id = profile[0]
         username = profile[1]
@@ -140,7 +140,7 @@ class MediaHandler:
             "title": title,
             "code": media_id,
             "date": posted_at_formatted,
-            "studio_id": of_studio_id,
+            "studio_id": user_studio_id,
             "performer_ids": performer_ids,
             "details": details,
             "organized": True

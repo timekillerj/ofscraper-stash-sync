@@ -25,10 +25,10 @@ class StashAPIHandler:
             logging.error(f"Error connecting to Stash API: {e}")
             self.stash = None
 
-    def get_of_studio_id(self):
+    def get_studio_id_by_name(self,name):
         if self.stash:
             try:
-                studio = self.stash.find_studio("onlyfans")
+                studio = self.stash.find_studio(name)
             except Exception as e:
                 logging.error("Error getting OnlyFans studio id")
                 return None
@@ -38,6 +38,24 @@ class StashAPIHandler:
         if not studio:
             return None
         return studio.get("id")
+
+    def create_of_user_studio(self,username, of_studio_id):
+        studio_data = {
+            "aliases": [],
+            "details": "Sub Studio for OnlyFans content creator",
+            "ignore_auto_tag": False,
+            "name": f"{username} (OnlyFans)",
+            "parent_id": of_studio_id,
+            "stash_ids": [],
+            "tag_ids": [],
+            "url": f"https://www.onlyfans.com/{username}"
+        }
+        try:
+            studio = self.stash.create_studio(studio_data)
+        except Exception as e:
+            logging.error(f"Error creating studio: {e}")
+            return None
+        return studio
 
     def get_unorganized_of_model_images(self,performer):
         try:
