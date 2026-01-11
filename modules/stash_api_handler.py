@@ -1,4 +1,7 @@
 import logging
+import base64
+from pathlib import Path
+
 from stashapi.stashapp import StashInterface
 
 
@@ -39,7 +42,29 @@ class StashAPIHandler:
             return None
         return studio.get("id")
 
+    def get_tag_id_by_name(self, name):
+        if self.stash:
+            try:
+                tag = self.stash.find_tag(name)
+            except Exception as e:
+                logging.error(f"Error getting tag: {e}")
+                return None
+        else:
+            logging.error("Not Connected to Stash API")
+            return None
+        if not tag:
+            return None
+        return tag.get("id")
+
     def create_of_user_studio(self,username, of_studio_id):
+        parent_dir = Path(__file__).resolve().parent.parent
+        image_path = parent_dir / "onlyfans.png"
+
+        of_image = None
+        if image_path.exists() and image_path.is_file():
+            with image_path.open("rb") as f:
+                of_image = base64.b64encode(f.read()).decode("utf-8")
+
         studio_data = {
             "aliases": [],
             "details": "Sub Studio for OnlyFans content creator",
@@ -50,6 +75,8 @@ class StashAPIHandler:
             "tag_ids": [],
             "url": f"https://www.onlyfans.com/{username}"
         }
+        if of_image:
+            studio_data['image'] = f"data:image/png;base64,{of_image}"
         try:
             studio = self.stash.create_studio(studio_data)
         except Exception as e:

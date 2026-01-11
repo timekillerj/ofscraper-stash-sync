@@ -44,7 +44,9 @@ def main(config_path):
         logging.error("Failed to connect to Stash API. Exiting.")
         return
 
-    media_handler = MediaHandler()
+    media_handler = MediaHandler(
+        int(config['Stash']['max_title_length'])
+    )
 
     # Get OnlyFans studio_id
     of_studio_id = stash_handler.get_studio_id_by_name('OnlyFans')

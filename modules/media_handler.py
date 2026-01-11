@@ -5,8 +5,8 @@ from datetime import datetime
 import html
 
 class MediaHandler:
-    def __init__(self):
-        pass
+    def __init__(self, max_title_length):
+        self.max_title_length = max_title_length
 
     def remove_html_tags(self, text):
         # Clean up HTML for Stash display
@@ -70,6 +70,23 @@ class MediaHandler:
                     all_performer_ids.append(performer_id)
         return all_performer_ids
 
+    def process_text(self, text):
+        # If there is a line break (<br>), split to title/details
+        parts = re.split(r'<br\s*/?>', text, maxsplit=1, flags=re.IGNORECASE)
+        title = parts[0]
+        details = text
+        title = self.remove_html_tags(title)
+        details = self.remove_html_tags(details)
+
+        # Truncate very long titles
+        if len(title) > self.max_title_length:
+            title = self.truncate_text(title, self.max_title_length)
+
+        # If title and details match, drop the redundant details
+        if title == details:
+            details = ''
+        return title,details
+
 
     def update_media(self, db_handler, stash_handler, profile, media_item, performer_ids, user_studio_id):
         # Split profile tuple to id and name
@@ -101,13 +118,16 @@ class MediaHandler:
         posted_at_formatted = posted_at_dt.strftime("%Y-%m-%d")
 
         # Media text could be in several tables, so we go looking for it
-        post_tables = ['posts','stories','messages','stories']
+        post_tables = ['posts','stories','messages']
         for table in post_tables:
             metadata_row = db_handler.execute(f'''
-                SELECT text FROM {table} where post_id = ?
+                SELECT text, price, paid, archived FROM {table} where post_id = ?
             ''', (post_id, )).fetchone()
             if metadata_row:
                 text = metadata_row[0]
+                price = metadata_row[1]
+                paid = metadata_row[2]
+                archived = metadata_row[3]
                 break
         if not text:
             # No text found, generate something useful
@@ -117,23 +137,19 @@ class MediaHandler:
             tagged_performer_ids = self.get_performer_ids_from_text(stash_handler, text)
         performer_ids = performer_ids + tagged_performer_ids
 
-        # If there is a line break (<br>), split to title/details
-        parts = re.split(r'<br\s*/?>', text, maxsplit=1, flags=re.IGNORECASE)
-        title = parts[0]
-        details = text
-        title = self.remove_html_tags(title)
-        details = self.remove_html_tags(details)
-
-        # Truncate very long titles
-        max_length = 255
-        if len(title) > max_length:
-            title = self.truncate_text(title, max_length)
-
-        # If title and details match, drop the redundant details
-        if title == details:
-            details = ''
+        title,details = self.process_text(text)
         logging.debug(f'Title: {title}')
         logging.debug(f'Details: {details}')
+        
+        tags = []
+        if paid == 1 and price > 0:
+            paid_tag_id = stash_handler.get_tag_id_by_name('paid')
+            if paid_tag_id:
+                tags.append(paid_tag_id)
+        if archived == 1:
+            archived_tag_id = stash_handler.get_tag_id_by_name('archived')
+            if archived_tag_id:
+                tags.append(archived)
 
         input = {
             "id": stash_media_id,
@@ -143,6 +159,7 @@ class MediaHandler:
             "studio_id": user_studio_id,
             "performer_ids": performer_ids,
             "details": details,
+            "tag_ids": tags,
             "organized": True
         }
         if link:

@@ -21,6 +21,9 @@ stop_on_missing_performer = True
 # same alias. Generic names can cause false matches and add unrelated performers to media
 multiple_performers_ok = False
 
+# Set the maximum length a title should have
+max_title_length = 65
+
 [Paths]
 # Path to .data directory created by OF-Scraper
 data_path = /path/to/ofscraper/main_profile/.data/
