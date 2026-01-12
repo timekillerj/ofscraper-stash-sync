@@ -24,6 +24,11 @@ multiple_performers_ok = False
 # Set the maximum length a title should have
 max_title_length = 65
 
+# Should the script perform a library scan before sync?
+# This uses the stash_of_library_path for the scan
+scan_library_before_sync = True
+
 [Paths]
 # Path to .data directory created by OF-Scraper
 data_path = /path/to/ofscraper/main_profile/.data/
+stash_of_library_path = /path/to/OnlyFans

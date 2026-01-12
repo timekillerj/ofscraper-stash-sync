@@ -119,6 +119,10 @@ class MediaHandler:
 
         # Media text could be in several tables, so we go looking for it
         post_tables = ['posts','stories','messages']
+        text = ''
+        price = ''
+        paid = ''
+        archived = ''
         for table in post_tables:
             metadata_row = db_handler.execute(f'''
                 SELECT text, price, paid, archived FROM {table} where post_id = ?

@@ -196,18 +196,18 @@ class StashAPIHandler:
         else:
             logging.error("Not connected to Stash API")
 
-    def metadata_scan(self):
-        """
-        {operationName: "MetadataScan",…}
-        operationName: "MetadataScan"
-        query: "mutation MetadataScan($input: ScanMetadataInput!) {\n  metadataScan(input: $input)\n}"
-        variables: {input: {scanGenerateCovers: true, scanGeneratePreviews: true, scanGenerateImagePreviews: true,…}}
-        paths: ["/data/OnlyFans"]
-        scanGenerateClipPreviews: true
-        scanGenerateCovers: true
-        scanGenerateImagePreviews: true
-        scanGeneratePhashes: true
-        scanGeneratePreviews: true
-        scanGenerateSprites: true
-        scanGenerateThumbnails: true 
-        """
+    def metadata_scan(self, path):
+        f = {
+            "scanGenerateClipPreviews": True,
+            "scanGenerateCovers": True,
+            "scanGenerateImagePreviews": True,
+            "scanGeneratePhashes": True,
+            "scanGeneratePreviews": True,
+            "scanGenerateSprites": True,
+            "scanGenerateThumbnails": True
+        }
+        try:
+            scan_id = self.stash.metadata_scan([path], f)
+        except Exception as e:
+            loggin.error(f"Error scanning library: {e}")
+        return scan_id
