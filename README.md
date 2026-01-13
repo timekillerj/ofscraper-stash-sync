@@ -49,10 +49,10 @@ docker run -it --rm --name=ofscraper-stash-sync -v /path/to/configs:/configs -v 
 ```
 
 ## Run Options
-|Option           |Parameter     | Description                                 |
-|-----------------|--------------|---------------------------------------------|
-|-h, --help       |              |show this help message and exit              |
-|-v, --verbose    |              |Enable verbose (debugging) output            |
-|-c, --config     |CONFIG_PATH   |Path to config file                          |
-|-m, --model      |FILTER_MODEL  |Filter to sync a single model's metadata     |
-|-fs, --full-sync |              |Ignore 'Organized' tag and (re)sync all media|
+|Option           |Parameter     | Description                                  |
+|-----------------|--------------|----------------------------------------------|
+|-h, --help       |              |show this help message and exit               |
+|-v, --verbose    |              |Enable verbose (debugging) output             |
+|-c, --config     |CONFIG_PATH   |Path to config file                           |
+|-m, --model      |FILTER_MODEL  |Filter to a comma separate list of models     |
+|-fs, --full-sync |              |Ignore 'Organized' tag and (re)sync all media |

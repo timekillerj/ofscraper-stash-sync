@@ -33,6 +33,9 @@ def main(config_path):
     config.read(config_path)
     # TODO: Validate config
 
+    if args.filter_model:
+        args.filter_models = [model.strip() for model in args.filter_model.split(",")]
+
     # Initialize handlers
     db_handler = DatabaseHandler(config['Paths']['data_path'])
     stash_handler = StashAPIHandler(
@@ -61,7 +64,7 @@ def main(config_path):
         if scan_id:
             logging.debug(f"Scan queued, sleeping a bit while it runs")
             # TODO: look into checking scan status with the scan_id
-            if args.filter_model:
+            if args.filter_models:
                 # only scanning 1 model
                 time.sleep(20)
             else:
@@ -97,8 +100,9 @@ def main(config_path):
         for profile in profiles:
             user_id = profile[0]
             username = profile[1]
-            if args.filter_model and username != args.filter_model:
-                logging.debug(f'Skipping because {username} != {args.filter_model}')
+            if args.filter_models and username not in args.filter_models:
+                logging.debug(f'Skipping because {username} not in {str(args.filter_models)}')
+                db_handler.close()
                 continue
             logging.info(f'Username: {username}, UserId: {user_id}')
 
