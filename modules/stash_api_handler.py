@@ -180,7 +180,7 @@ class StashAPIHandler:
         if self.stash:
             try:
                 self.stash.update_scene(input_data)
-                logging.info(f"Updated scene with id: {input_data['id']}")
+                logging.debug(f"Updated scene with id: {input_data['id']}")
             except Exception as e:
                 logging.error(f"Error updating scene: {e}")
         else:
@@ -190,7 +190,7 @@ class StashAPIHandler:
         if self.stash:
             try:
                 self.stash.update_image(input_data)
-                logging.info(f"Updated image with id: {input_data['id']}")
+                logging.debug(f"Updated image with id: {input_data['id']}")
             except Exception as e:
                 logging.error(f"Error updating image: {e}")
         else:

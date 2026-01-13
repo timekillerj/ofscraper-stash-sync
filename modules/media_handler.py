@@ -181,8 +181,8 @@ class MediaHandler:
         logging.debug(f"FILE: {filename}")
         if media_type == 'Videos':
             stash_handler.update_scene(input)
-            logging.info(f"Updated: Scene {stash_media_id}: {title}")
+            logging.info(f"Updated Scene for {username}: {stash_media_id}: {title}")
         elif media_type == 'Images':
             stash_handler.update_image(input)
-            logging.info(f"Updated: Image {stash_media_id}: {title}")
+            logging.info(f"Updated Image for {username}: {stash_media_id}: {title}")
         return
