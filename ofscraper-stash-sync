@@ -79,6 +79,7 @@ def main(config_path):
 
     # Get sqlite database files
     # OFScraper creates a sqlite file for each model, so we have to search the data path
+    logging.info('Scanning for databases')
     databases = db_handler.find_database_files()
     logging.debug(f'Found {len(databases)} databases')
 
