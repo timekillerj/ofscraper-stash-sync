@@ -1,1 +1,2 @@
 stashapp-tools==0.2.59
+emojis==0.7.0

@@ -3,6 +3,7 @@ import re
 from datetime import datetime
 
 import html
+import emojis
 
 class MediaHandler:
     def __init__(self, max_title_length):
@@ -23,21 +24,27 @@ class MediaHandler:
 
         return text
 
-    def truncate_text(self, text, max_length=255):
-        # OF text can be very long. We look for a good place to truncate on a space
-        if len(text) <= max_length:
-            return text
+    def truncate_title(self, title, max_length):
 
-        truncated_text = text[:max_length]
-        last_space_index = truncated_text.rfind(' ')
-        if last_space_index != -1:
-            return f'{truncated_text[:last_space_index]}...'
-        else:
-            return f'{truncated_text}...'
+        # Check if the title is already under max length
+        if len(title) <= max_length:
+            return title
+        last_punctuation_index = -1
+        punctuation_chars = {'.', '!', '?', '❤', '☺'}
+        punctuation_chars.update(emojis.get(title))
+        for c in punctuation_chars:
+            last_punctuation_index = max(title.rfind(c, 0, max_length), last_punctuation_index)
+        if last_punctuation_index != -1:
+            return title[:last_punctuation_index+1]
+        # Find the last space character before max length
+        last_space_index = title.rfind(" ",0, max_length)
+        # truncate at last_space_index if valid, else max_length
+        title_end = last_space_index if last_space_index != -1 else max_length
+        return title[:title_end]
 
     def parse_text_for_performers(self, text):
         # Look for '@' mentions in text and return a list
-        mentions = re.findall(r'@\w+[.]?\w+', text)
+        mentions = re.findall(r"(?:^|\s)@([\w\-\.]+)", text)
         all_tagged_performers = []
         for mention in mentions:
             performer = mention.lower()
@@ -80,7 +87,7 @@ class MediaHandler:
 
         # Truncate very long titles
         if len(title) > self.max_title_length:
-            title = self.truncate_text(title, self.max_title_length)
+            title = self.truncate_title(title, self.max_title_length)
 
         # If title and details match, drop the redundant details
         if title == details:
