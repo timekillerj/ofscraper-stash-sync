@@ -43,8 +43,16 @@ class MediaHandler:
         return title[:title_end]
 
     def parse_text_for_performers(self, text):
-        # Look for '@' mentions in text and return a list
-        mentions = re.findall(r"(?:^|\s)@([\w\-\.]+)", text)
+        # Look for @mentions in text.
+        # This regex allows for html tags before name (<a href=''>@name</a>),
+        # periods and dashed in name, and ignores punctuation after name
+        # just the name without the '@' is returned
+        mentions = re.findall(
+            r"(?:^|\s|>)@([\w\-]+(?:\.[\w\-]+)*)(?=[\s\.\?\!\u2026<,:;]|$)",
+            text
+        )
+
+        #mentions = re.findall(r"(?:^|\s)@([\w\-\.]+)", text)
         all_tagged_performers = []
         for mention in mentions:
             performer = mention.lower()
@@ -60,9 +68,6 @@ class MediaHandler:
         all_performer_ids = []
         # Loop performers
         for tagged_performer in tagged_performers:
-            # strip '@' from name
-            tagged_performer = tagged_performer.lstrip('@')
-
             # Look for performer with exact match name or alias
             performers = stash_handler.get_stash_performers_by_name(tagged_performer)
             if not performers:
