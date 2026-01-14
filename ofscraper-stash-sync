@@ -33,6 +33,7 @@ def main(config_path):
     config.read(config_path)
     # TODO: Validate config
 
+    args.filter_models = []
     if args.filter_model:
         args.filter_models = [model.strip() for model in args.filter_model.split(",")]
 
