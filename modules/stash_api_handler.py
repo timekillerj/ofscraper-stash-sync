@@ -207,7 +207,18 @@ class StashAPIHandler:
             "scanGenerateThumbnails": True
         }
         try:
-            scan_id = self.stash.metadata_scan([path], f)
+            job_id = self.stash.metadata_scan([path], f)
         except Exception as e:
             loggin.error(f"Error scanning library: {e}")
-        return scan_id
+        return job_id
+
+    def get_job_by_id(self,job_id):
+        job = None
+        if self.stash:
+            try:
+                job = self.stash.find_job(job_id)
+            except Exception as e:
+                logging.error(f'Error finding job with id {job_id}: {e}')
+        else:
+            logging.error("Not connected to Stash API")
+        return job

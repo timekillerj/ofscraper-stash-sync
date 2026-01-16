@@ -9,6 +9,36 @@ class MediaHandler:
     def __init__(self, max_title_length):
         self.max_title_length = max_title_length
 
+    def job_scanning_check(self, stash_handler, job_id):
+        job = stash_handler.get_job_by_id(job_id)
+        if job['status'] == 'RUNNING':
+            # Job is still running, let's make sure it's scanning and we're not waiting on generating tasks
+            if job['subTasks']:
+                for subtask in job['subTasks']:
+                    if subtask == 'Walking directory tree':
+                        logging.debug(f'Job is still scanning library')
+                        return True
+            else:
+                # No subtasks yet, likely the job just started
+                # return True, and check again
+                return True
+        elif job['status'] == 'READY':
+            logging.debug(f'Job id {job_id} is waiting to start')
+            return True
+        start_dt = self.parse_iso(job['startTime'])
+        end_dt   = self.parse_iso(job['endTime'])
+        runtime = end_dt - start_dt
+        logging.debug(f'Job took {runtime} to complete')
+        return False
+
+    def parse_iso(self, ts: str) -> datetime:
+        # Trim fractional seconds to 6 digits if needed
+        if '.' in ts:
+            date, rest = ts.split('.', 1)
+            frac, tz = rest[:6], rest[6:]
+            ts = f"{date}.{frac}{tz}"
+        return datetime.fromisoformat(ts)
+
     def remove_html_tags(self, text):
         # Clean up HTML for Stash display
 

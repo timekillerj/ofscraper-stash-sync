@@ -61,17 +61,18 @@ def main(config_path):
         if args.filter_model:
             scan_path = f"{scan_path}/{args.filter_model}"
         logging.info(f"Scanning Library Path: {scan_path}")
-        scan_id = stash_handler.metadata_scan(scan_path)
-        if scan_id:
-            logging.debug(f"Scan queued, sleeping a bit while it runs")
-            # TODO: look into checking scan status with the scan_id
-            if args.filter_models:
-                # only scanning 1 model
-                time.sleep(20)
-            else:
-                # scanning the whole library
-                time.sleep(180)
-
+        job_id = stash_handler.metadata_scan(scan_path)
+        if job_id:
+            logging.debug(f"Scan queued, waiting until scan is finished")
+            scanning = True
+            while scanning:
+                # Go into a loop while we wait for the scan to finish
+                scanning = media_handler.job_scanning_check(stash_handler, job_id)
+                time.sleep(2)
+            logging.info('Library scan complete')
+        else:
+            logging.error('Failed to start library scan. Exiting.')
+            return
 
     # Get OnlyFans studio_id
     of_studio_id = stash_handler.get_studio_id_by_name('OnlyFans')
