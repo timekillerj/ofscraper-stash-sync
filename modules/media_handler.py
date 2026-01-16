@@ -214,7 +214,10 @@ class MediaHandler:
         logging.debug(input)
         # Find media in stash
         logging.debug(f"FILE: {filename}")
-        if media_type == 'Videos':
+        # OF treats gifs as video, but Stash stores it as an image
+        if filename.endswith('.gif'):
+            media_type = 'Images'
+        if media_type in ['Videos','Audios']:
             stash_handler.update_scene(input)
             logging.info(f"Updated Scene for {username}: {stash_media_id}: {title}")
         elif media_type == 'Images':
