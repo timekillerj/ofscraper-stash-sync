@@ -1,5 +1,6 @@
 import logging
 import re
+import os
 from datetime import datetime
 
 import html
@@ -129,6 +130,13 @@ class MediaHandler:
             details = ''
         return title,details
 
+    def parse_filename_to_studio_code(self, filename):
+        if not filename:
+            return ""
+        basename = os.path.splitext(filename)[0]
+        basename = basename.removesuffix("_source")
+        return basename
+
 
     def update_media(self, db_handler, stash_handler, profile, media_item, performer_ids, user_studio_id):
         # Split profile tuple to id and name
@@ -200,7 +208,7 @@ class MediaHandler:
         input = {
             "id": stash_media_id,
             "title": title,
-            "code": media_id,
+            "code": self.parse_filename_to_studio_code(filename),
             "date": posted_at_formatted,
             "studio_id": user_studio_id,
             "performer_ids": performer_ids,
@@ -208,8 +216,7 @@ class MediaHandler:
             "tag_ids": tags,
             "organized": True
         }
-        if link:
-            input["urls"] = [link]
+        input['urls'] = [f'https://www.onlyfans.com/{post_id}/{username}']
 
         logging.debug(input)
         # Find media in stash
