@@ -75,7 +75,7 @@ def main(config_path):
             return
 
     # Get OnlyFans studio_id
-    of_studio_id = stash_handler.get_studio_id_by_name('OnlyFans')
+    of_studio_id = stash_handler.get_studio_id_by_name('OnlyFans (network)')
     logging.debug(f'OnlyFans studio id: {of_studio_id}')
     if not of_studio_id:
         logging.error('Failed to get studio id for "OnlyFans". Exiting.')
