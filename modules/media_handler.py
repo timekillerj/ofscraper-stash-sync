@@ -34,7 +34,7 @@ class MediaHandler:
 
     def parse_iso(self, ts: str) -> datetime:
         # Trim fractional seconds to 6 digits if needed
-        if '.' in ts:
+        if ts and '.' in ts:
             date, rest = ts.split('.', 1)
             frac, tz = rest[:6], rest[6:]
             ts = f"{date}.{frac}{tz}"
