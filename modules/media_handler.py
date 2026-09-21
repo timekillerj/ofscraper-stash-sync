@@ -6,6 +6,7 @@ from datetime import datetime
 import html
 import emojis
 
+
 class MediaHandler:
     def __init__(self, max_title_length):
         self.max_title_length = max_title_length
