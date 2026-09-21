@@ -9,27 +9,55 @@ import emojis
 class MediaHandler:
     def __init__(self, max_title_length):
         self.max_title_length = max_title_length
+        self.scan_walking_seen = False
 
     def job_scanning_check(self, stash_handler, job_id):
         job = stash_handler.get_job_by_id(job_id)
-        if job['status'] == 'RUNNING':
-            # Job is still running, let's make sure it's scanning and we're not waiting on generating tasks
-            if job['subTasks']:
-                for subtask in job['subTasks']:
-                    if subtask == 'Walking directory tree':
-                        logging.debug(f'Job is still scanning library')
-                        return True
-            else:
-                # No subtasks yet, likely the job just started
-                # return True, and check again
-                return True
-        elif job['status'] == 'READY':
-            logging.debug(f'Job id {job_id} is waiting to start')
+
+        status = job.get('status')
+        subtasks = job.get('subTasks') or []
+
+        logging.debug(
+            f"Scan job {job_id}: status={status}, subTasks={subtasks}"
+        )
+
+        # Job hasn't started yet
+        if status == 'READY':
+            logging.debug(f'Job {job_id} is waiting to start')
             return True
-        start_dt = self.parse_iso(job['startTime'])
-        end_dt   = self.parse_iso(job['endTime'])
-        runtime = end_dt - start_dt
-        logging.debug(f'Job took {runtime} to complete')
+
+        if status == 'RUNNING':
+            walking = 'Walking directory tree' in subtasks
+
+            if walking:
+                # Remember that we have actually observed the scan phase.
+                self.scan_walking_seen = True
+                logging.debug('Stash is walking directory tree')
+                return True
+
+            # Critical distinction:
+            # If we've never seen Walking directory tree, don't assume
+            # it has already finished. It may simply not have started yet.
+            if not getattr(self, 'scan_walking_seen', False):
+                logging.debug(
+                    'Job is RUNNING but directory walking has not '
+                    'started/appeared yet'
+                )
+                return True
+
+            # We previously saw Walking directory tree and now it's gone.
+            # This is exactly the point we care about.
+            logging.debug(
+                'Directory walk completed; continuing while remaining '
+                'Stash tasks run in background'
+            )
+            return False
+
+        # The entire job finished before we happened to observe the
+        # directory-walking transition. That's also safe to continue.
+        logging.debug(
+            f'Stash scan job {job_id} ended with status {status}'
+        )
         return False
 
     def parse_iso(self, ts: str) -> datetime:
