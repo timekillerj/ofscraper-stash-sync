@@ -232,7 +232,7 @@ class MediaHandler:
         if archived == 1:
             archived_tag_id = stash_handler.get_tag_id_by_name('archived')
             if archived_tag_id:
-                tags.append(archived)
+                tags.append(archived_tag_id)
 
         input = {
             "id": stash_media_id,

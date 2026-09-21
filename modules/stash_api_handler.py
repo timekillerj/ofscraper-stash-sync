@@ -12,6 +12,13 @@ class StashAPIHandler:
         self.host = host
         self.port = port
         self.stash = None
+
+        # Unorganized media indexes.
+        # Key = OF username
+        # Value = list of Stash images/scenes
+        self.unorganized_images_by_model = {}
+        self.unorganized_scenes_by_model = {}
+
         self.connect()
 
     def connect(self):
@@ -27,6 +34,152 @@ class StashAPIHandler:
         except Exception as e:
             logging.error(f"Error connecting to Stash API: {e}")
             self.stash = None
+
+    def build_unorganized_media_index(self, stash_of_library_path):
+        """
+        Load unorganized OnlyFans images/scenes from Stash once and
+        index them by model directory.
+
+        stash_of_library_path must be the path as seen by Stash/Docker.
+
+        Example:
+            /data/studios/OnlyFans
+
+        Expected media path:
+            /data/studios/OnlyFans/<username>/...
+        """
+
+        self.unorganized_images_by_model = {}
+        self.unorganized_scenes_by_model = {}
+
+        logging.info("Loading all unorganized images from Stash")
+
+        try:
+            images = self.stash.find_images(
+                f={
+                    "path": {
+                        "value": stash_of_library_path,
+                        "modifier": "INCLUDES"
+                    },
+                    "organized": False
+                },
+                filter={
+                    "per_page": -1
+                }
+            ) or []
+        except Exception as e:
+            logging.error(f"Error loading unorganized images: {e}")
+            return False
+
+        logging.info(f"Found {len(images)} total unorganized images")
+
+        #if images:
+        #    logging.info(f"SAMPLE IMAGE OBJECT: {images[0]}")
+
+        logging.info("Loading all unorganized scenes from Stash")
+
+        try:
+            scenes = self.stash.find_scenes(
+                f={
+                    "path": {
+                        "value": stash_of_library_path,
+                        "modifier": "INCLUDES"
+                    },
+                    "organized": False
+                },
+                filter={
+                    "per_page": -1
+                }
+            ) or []
+        except Exception as e:
+            logging.error(f"Error loading unorganized scenes: {e}")
+            return False
+
+        logging.info(f"Found {len(scenes)} total unorganized scenes")
+
+        #if scenes:
+        #    logging.info(f"SAMPLE SCENE OBJECT: {scenes[0]}")
+
+        for image in images:
+            username = self._get_model_from_media(
+                image,
+                stash_of_library_path
+            )
+
+            if username:
+                self.unorganized_images_by_model.setdefault(
+                    username.lower(), []
+                ).append(image)
+
+        for scene in scenes:
+            username = self._get_model_from_media(
+                scene,
+                stash_of_library_path
+            )
+
+            if username:
+                self.unorganized_scenes_by_model.setdefault(
+                    username.lower(), []
+                ).append(scene)
+
+        model_count = len(
+            set(self.unorganized_images_by_model)
+            | set(self.unorganized_scenes_by_model)
+        )
+
+        logging.info(
+            f"Indexed unorganized media for {model_count} models"
+        )
+
+        return True
+
+    def _get_model_from_media(self, media, stash_of_library_path):
+        """
+        Extract the OF username from the first directory underneath
+        the OnlyFans library path as seen by Stash.
+
+        Example:
+
+            Stash base:
+                /data/studios/OnlyFans
+
+            Media:
+                /data/studios/OnlyFans/ana_lingus/Posts/foo.jpg
+
+            Returns:
+                ana_lingus
+        """
+
+        files = media.get("visual_files") or media.get("files") or []
+
+        if not files:
+            logging.debug(
+                f"Media {media.get('id')} has no files"
+            )
+            return None
+
+        file_path = files[0].get("path")
+
+        if not file_path:
+            logging.debug(
+                f"Media {media.get('id')} has no file path"
+            )
+            return None
+
+        try:
+            relative_path = Path(file_path).relative_to(
+                Path(stash_of_library_path)
+            )
+        except ValueError:
+            logging.debug(
+                f"Media path is outside Stash OF library: {file_path}"
+            )
+            return None
+
+        if not relative_path.parts:
+            return None
+
+        return relative_path.parts[0]
 
     def get_studio_id_by_name(self,name):
         if self.stash:
@@ -57,7 +210,7 @@ class StashAPIHandler:
         return tag.get("id")
 
     def create_performer(self, name):
-        input = {
+        performer_data = {
             "name": name,
             "gender": "FEMALE",
             "urls": [
@@ -65,24 +218,17 @@ class StashAPIHandler:
             ]
         }
 
-        query = """
-            mutation PerformerCreate($input: PerformerCreateInput!) {
-                performerCreate(input: $input) {
-                    id
-                    name
-                    gender
-                    urls
-                }
-            }
-        """
-
-        result = self.call_graphql(query, {"input": input})
-
-        if not result or not result.get("performerCreate"):
-            logging.error(f"Failed to create Stash performer {name}")
+        try:
+            performer = self.stash.create_performer(performer_data)
+        except Exception as e:
+            logging.error(
+                f"Error creating Stash performer {name}: {e}"
+            )
             return None
 
-        performer = result["performerCreate"]
+        if not performer:
+            logging.error(f"Failed to create Stash performer {name}")
+            return None
 
         logging.info(
             f"Created Stash performer {performer['name']} "
@@ -119,34 +265,29 @@ class StashAPIHandler:
             return None
         return studio
 
-    def get_unorganized_of_model_images(self,performer):
-        try:
-            # Newly scanned images will not have a performer attached, so we use
-            # the file path since OF puts files in a model directory
-            images = self.stash.find_images(
-                f={
-                    "path": {"value": performer, "modifier": "INCLUDES"},
-                    "organized": False
-                }
-            )
-        except Exception as e:
-            logging.error(f'Error getting images: {e}')
-            return None
+    def get_unorganized_of_model_images(self, performer):
+        images = self.unorganized_images_by_model.get(
+            performer.lower(), []
+        )
+
+        logging.debug(
+            f"Found {len(images)} indexed unorganized images "
+            f"for {performer}"
+        )
+
         return images
 
-    def get_unorganized_of_model_scenes(self,performer):
-        try:
-            # Newly scanned scenes will not have a performer attached, so we use
-            # the file path since OF puts files in a model directory
-            scenes = self.stash.find_scenes(
-                f={
-                    "path": {"value": performer, "modifier": "INCLUDES"},
-                    "organized": False
-                }
-            )
-        except Exception as e:
-            logging.error(f'Error getting scenes: {e}')
-            return None
+
+    def get_unorganized_of_model_scenes(self, performer):
+        scenes = self.unorganized_scenes_by_model.get(
+            performer.lower(), []
+        )
+
+        logging.debug(
+            f"Found {len(scenes)} indexed unorganized scenes "
+            f"for {performer}"
+        )
+
         return scenes
 
     def get_all_of_model_images(self,performer):

@@ -53,6 +53,8 @@ def main(config_path):
         int(config['Stash']['max_title_length'])
     )
 
+    scan_path = config['Paths']['stash_of_library_path']
+
     # If scan_library_before_sync = True we do it here.
     # If we are not filtering to a model, we scan the whole OF path
     # Otherwise we expect the model path to be {stash_of_library_path}/{model}
@@ -81,6 +83,10 @@ def main(config_path):
         logging.error('Failed to get studio id for "OnlyFans". Exiting.')
         return
 
+    # Build our in-memory index now that Stash knows about all new files.
+    if not stash_handler.build_unorganized_media_index(scan_path):
+        logging.error("Unable to build unorganized media index")
+        return
 
     # Get sqlite database files
     # OFScraper creates a sqlite file for each model, so we have to search the data path
