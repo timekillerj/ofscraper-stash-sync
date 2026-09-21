@@ -56,6 +56,41 @@ class StashAPIHandler:
             return None
         return tag.get("id")
 
+    def create_performer(self, name):
+        input = {
+            "name": name,
+            "gender": "FEMALE",
+            "urls": [
+                f"https://onlyfans.com/{name}"
+            ]
+        }
+
+        query = """
+            mutation PerformerCreate($input: PerformerCreateInput!) {
+                performerCreate(input: $input) {
+                    id
+                    name
+                    gender
+                    urls
+                }
+            }
+        """
+
+        result = self.call_graphql(query, {"input": input})
+
+        if not result or not result.get("performerCreate"):
+            logging.error(f"Failed to create Stash performer {name}")
+            return None
+
+        performer = result["performerCreate"]
+
+        logging.info(
+            f"Created Stash performer {performer['name']} "
+            f"(ID: {performer['id']})"
+        )
+
+        return performer
+
     def create_of_user_studio(self,username, of_studio_id):
         parent_dir = Path(__file__).resolve().parent.parent
         image_path = parent_dir / "onlyfans.png"
