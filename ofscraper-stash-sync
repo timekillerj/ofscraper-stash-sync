@@ -10,6 +10,7 @@ import configparser
 from modules.database_handler import DatabaseHandler
 from modules.stash_api_handler import StashAPIHandler
 from modules.media_handler import MediaHandler
+from modules.ofclient import OnlyFansClient
 
 
 parser = argparse.ArgumentParser(description="A tool to sync OFScraper metadata to Stash")
@@ -33,6 +34,8 @@ def main(config_path):
     config.read(config_path)
     # TODO: Validate config
 
+    onlyfans = OnlyFansClient()
+
     args.filter_models = []
     if args.filter_model:
         args.filter_models = [model.strip() for model in args.filter_model.split(",")]
@@ -43,7 +46,8 @@ def main(config_path):
         config['Stash']['api_key'],
         config['Stash']['scheme'],
         config['Stash']['host'],
-        config['Stash']['port']
+        config['Stash']['port'],
+        onlyfans
     )
     if not stash_handler.stash:
         logging.error("Failed to connect to Stash API. Exiting.")

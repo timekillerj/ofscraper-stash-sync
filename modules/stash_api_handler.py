@@ -3,17 +3,18 @@ import base64
 from pathlib import Path
 
 import requests
-import ofscraper.runner.manager as manager
-import ofscraper.utils.constants as constants
+from .ofclient import OnlyFansClient
 
 from stashapi.stashapp import StashInterface
 
+
 class StashAPIHandler:
-    def __init__(self, api_key, scheme, host, port):
+    def __init__(self, api_key, scheme, host, port, onlyfans):
         self.api_key = api_key
         self.scheme = scheme
         self.host = host
         self.port = port
+        self.onlyfans = onlyfans
         self.stash = None
 
         # Unorganized media indexes.
@@ -212,74 +213,24 @@ class StashAPIHandler:
             return None
         return tag.get("id")
 
-    def get_onlyfans_avatar(self, username):
-        """
-        Get a performer's avatar directly from OnlyFans using ofscraper's
-        authenticated/signed session.
-
-        Returns the avatar URL if available, otherwise None.
-        """
-
-        try:
-            # Initialize the minimal manager needed for OFSessionManager.
-            if manager.Manager is None:
-                manager.Manager = manager.mainManager()
-
-            url = constants.getattr("profileEP").format(username)
-
-            with manager.Manager.get_ofsession(backend="httpx") as c:
-                with c.requests(url) as r:
-
-                    if r.status == 404:
-                        logging.info(
-                            f"OnlyFans profile @{username} does not exist"
-                        )
-                        return None
-
-                    if r.status != 200:
-                        logging.warning(
-                            f"Unable to retrieve OnlyFans profile @{username}: "
-                            f"HTTP {r.status}"
-                        )
-                        return None
-
-                    data = r.json()
-                    avatar_url = data.get("avatar")
-
-                    if not avatar_url:
-                        logging.info(
-                            f"OnlyFans profile @{username} has no avatar"
-                        )
-                        return None
-
-                    logging.info(
-                        f"Found OnlyFans avatar for @{username}"
-                    )
-
-                    return avatar_url
-
-        except Exception as e:
-            logging.warning(
-                f"Unable to retrieve OnlyFans avatar for @{username}: {e}"
-            )
-            return None
-
     def create_performer(self, name):
         performer_data = {
             "name": name,
+            "gender": "FEMALE",
             "urls": [
                 f"https://onlyfans.com/{name}"
             ]
         }
 
-        # TODO: add config option to create performer with OF avatar if available
-        avatar_url = self.get_onlyfans_avatar(name)
+        avatar_url = self.onlyfans.get_avatar(name)
 
         if avatar_url:
             performer_data["image"] = avatar_url
 
         try:
-            performer = self.stash.create_performer(performer_data)
+            performer = self.stash.create_performer(
+                performer_data
+            )
         except Exception as e:
             logging.error(
                 f"Error creating Stash performer {name}: {e}"
@@ -287,13 +238,20 @@ class StashAPIHandler:
             return None
 
         if not performer:
-            logging.error(f"Failed to create Stash performer {name}")
+            logging.error(
+                f"Failed to create Stash performer {name}"
+            )
             return None
 
         logging.info(
-            f"Created Stash performer {performer['name']} "
+            f"Created Stash performer "
+            f"{performer['name']} "
             f"(ID: {performer['id']})"
-            + (" with OnlyFans avatar" if avatar_url else "")
+            + (
+                " with OnlyFans avatar"
+                if avatar_url
+                else ""
+            )
         )
 
         return performer
