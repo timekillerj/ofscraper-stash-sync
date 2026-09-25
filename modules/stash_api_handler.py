@@ -2,6 +2,8 @@ import logging
 import base64
 from pathlib import Path
 
+import requests
+
 from stashapi.stashapp import StashInterface
 
 
@@ -209,6 +211,44 @@ class StashAPIHandler:
             return None
         return tag.get("id")
 
+    def get_onlyfans_avatar(self, username):
+        avatar_url = f"https://unavatar.io/onlyfans/{username}"
+
+        try:
+            response = requests.get(
+                avatar_url,
+                timeout=10
+            )
+
+            if response.status_code != 200:
+                logging.info(
+                    f"No OnlyFans avatar available for {username} "
+                    f"(HTTP {response.status_code})"
+                )
+                return None
+
+            content_type = response.headers.get("content-type", "")
+
+            if not content_type.startswith("image/"):
+                logging.info(
+                    f"No OnlyFans avatar available for {username} "
+                    f"(content-type: {content_type})"
+                )
+                return None
+
+            logging.info(
+                f"Found OnlyFans avatar for {username}"
+            )
+
+            return avatar_url
+
+        except requests.RequestException as e:
+            logging.warning(
+                f"Unable to retrieve OnlyFans avatar for {username}: {e}"
+            )
+            return None
+
+
     def create_performer(self, name):
         performer_data = {
             "name": name,
@@ -217,6 +257,11 @@ class StashAPIHandler:
                 f"https://onlyfans.com/{name}"
             ]
         }
+
+        avatar_url = self.get_onlyfans_avatar(name)
+
+        if avatar_url:
+            performer_data["image"] = avatar_url
 
         try:
             performer = self.stash.create_performer(performer_data)
@@ -233,6 +278,7 @@ class StashAPIHandler:
         logging.info(
             f"Created Stash performer {performer['name']} "
             f"(ID: {performer['id']})"
+            + (" with OnlyFans avatar" if avatar_url else "")
         )
 
         return performer
@@ -328,7 +374,7 @@ class StashAPIHandler:
                 
             alias_performers = self.stash.find_performers(
                 f={
-                    "aliases": {"value": username, "modifier": "INCLUDES"},
+                    "aliases": {"value": username, "modifier": "EQUALS"},
                 }
             )
         except Exception as e:
@@ -385,7 +431,7 @@ class StashAPIHandler:
         try:
             job_id = self.stash.metadata_scan([path], f)
         except Exception as e:
-            loggin.error(f"Error scanning library: {e}")
+            logging.error(f"Error scanning library: {e}")
         return job_id
 
     def get_job_by_id(self,job_id):

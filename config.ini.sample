@@ -17,6 +17,9 @@ stop_on_missing_performer = True
 # Create missing performers?
 create_missing_performer = False
 
+# Create missing mentioned performers?
+create_missing_mentioned_performers = False
+
 # Some couples use a single OF account. You can either create a similar couple "Performer"
 # in Stash, or create multiple performers and add the OF username as an alias for both
 # If you split the account into multiple performers, set this to 'True'

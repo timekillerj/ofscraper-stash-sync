@@ -8,8 +8,9 @@ import emojis
 
 
 class MediaHandler:
-    def __init__(self, max_title_length):
+    def __init__(self, max_title_length, create_missing_mentioned_performers=False):
         self.max_title_length = max_title_length
+        self.create_missing_mentioned_performers = create_missing_mentioned_performers
         self.scan_walking_seen = False
 
     def job_scanning_check(self, stash_handler, job_id):
@@ -131,7 +132,22 @@ class MediaHandler:
             # Look for performer with exact match name or alias
             performers = stash_handler.get_stash_performers_by_name(tagged_performer)
             if not performers:
-                continue
+                if self.create_missing_mentioned_performers:
+                    logging.info(f"Creating missing Stash performer (mentioned): {tagged_performer}")
+                    performer = stash_handler.create_performer(tagged_performer)
+
+                    if performer:
+                        performers = [performer]
+                        logging.info(
+                            f"Created performer {tagged_performer} "
+                            f"with Stash ID {performer['id']}"
+                        )
+                    else:
+                        logging.error(
+                            f"Failed to create Stash performer {tagged_performer}"
+                        )
+
+                        continue
 
             logging.debug(f'Found {len(performers)} matching performers')
 
