@@ -216,7 +216,6 @@ class StashAPIHandler:
     def create_performer(self, name):
         performer_data = {
             "name": name,
-            "gender": "FEMALE",
             "urls": [
                 f"https://onlyfans.com/{name}"
             ]
