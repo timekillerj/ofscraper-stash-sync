@@ -8,4 +8,4 @@ RUN pip install -r /app/requirements.txt
 
 ENV PATH="$PATH:/app"
 
-CMD ['/app/ofscraper-stash-sync', '-c', '/configs/config.ini']
+CMD ["/app/ofscraper-stash-sync", "-c", "/configs/config.ini"]
